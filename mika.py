@@ -18,10 +18,12 @@ import matplotlib as mpl
 from matplotlib.patches import Patch
 import os,sys
 from matplotlib.font_manager import FontProperties
-font_path = '/home/hello/VScode/NotoSansSC-VariableFont_wght.ttf'
-font_prop = FontProperties(fname=font_path)
+font_path = 'SNsanafonGyou.ttf'
+# font_prop = FontProperties(fname=font_path)
 from wordcloud import WordCloud, STOPWORDS
+import jieba
 import random
+
 
 
 
@@ -38,184 +40,100 @@ def load_api_key():
 openai.api_key=load_api_key()
 
 
-# def load_db_config():
-#     with open("config.yaml", "r") as yamlfile:
-#         cfg = yaml.safe_load(yamlfile)
-#     return cfg["database"]
-
-# def connect_to_db():
-#     db_config = load_db_config()
-#     try:
-#         connection = psycopg2.connect(
-#             dbname=db_config["dbname"],
-#             user=db_config["user"],
-#             password=db_config["password"],
-#             host=db_config["host"]
-#         )
-#         return connection
-#     except Exception as e:
-#         print(f"An error occurred while connecting to the database: {e}")
-#         return None
-
-# def fetch_student_data_as_dataframe(student_id):
-#     conn = connect_to_db()
-#     if conn is not None:
-#         cursor = conn.cursor(cursor_factory=RealDictCursor)
-#         try:
-#             cursor.execute("SELECT * FROM students WHERE student_id = %s", (student_id,))
-#             result = cursor.fetchone()  #  student data
-#             if result:
-#                 # Convert the dictionary to a pandas DataFrame
-#                 df = pd.DataFrame([result])
-#                 return df  # Return the DataFrame
-#             else:
-#                 print(f"No data found for student ID: {student_id}")
-#                 return pd.DataFrame()  # Return empty DataFrame if no data
-#         except Exception as e:
-#             print(f"An error occurred while fetching data: {e}")
-#         finally:
-#             cursor.close()
-#             conn.close()
-#     else:
-#         print("Failed to connect to the database.")
-#     return pd.DataFrame() 
-
 def process_csv_and_generate_content(file_path_xlxs, name):
+# This function reads an Excel file, filters the data to find a row matching the provided name,
+    # and extracts various pieces of information from specific columns.
+
+    
     try:
         df = pd.read_excel(file_path_xlxs)
-        word=df.iloc[7,16:]
         name_column = '学生拼音/英文姓名（例：Eric Zhang 或者 Runxin Zhang）Student Name (First Name + Last Name)'
         data = df[df[name_column] == name].astype(str)
 
         if data.empty:
-            return None, "person not found", None, None, None, None, None
-
+            return None, "person not found", None, None, None, None, None, None
+        words = data.iloc[:, 6:79].astype(str)
         basic_info = data.iloc[:, 6:10].astype(str)
         major_preferences = data.iloc[:, 14:37].astype(str)
         college_preferences = data.iloc[:, 37:49].astype(str)
         potential_major_exploration = data.iloc[:, 49:79].astype(str)
         column_AU = data.iloc[:, 46].astype(str)
-        return data, name, basic_info, major_preferences, college_preferences, potential_major_exploration, column_AU
+        return words, data, name, basic_info, major_preferences, college_preferences, potential_major_exploration, column_AU
     except ValueError as e:
         print(f"Error reading the Excel file: {e}")
-        return None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None
 
+def word_cloud(words, file_path, font_path, name):
+    # Creating png file for the title list, where we are focusing on the name in the middle of the picture
+    stopwords = set(STOPWORDS)
+    custom_words = ["非常同意", "同意", "适度", '强烈反对', '跳过', '是', '否', 'Yes', ' No', 'neutral', 'maybe','Agree', '非常同意 Strongly Agree', 'disagree','强烈反对 Strongly disagree']
+    stopwords.update(word.lower() for word in custom_words)
+    stopwords.discard(name.lower()) 
+    text = ' '.join(words.astype(str).values.flatten())
+    text += (' ' + name) * 1000  
+    wc = WordCloud(
+        background_color='white',
+        width=9000,
+        height=6500,
+        stopwords=stopwords,
+        font_path=font_path,
+        prefer_horizontal=1.0,
+        collocations=False
+    ).generate(text)
 
-# def generate_wordcloud(file_path, text):
-#     stopwords = set(STOPWORDS)
-#     wordcloud = WordCloud(
-#         background_color="white",
-#         width=1024,
-#         height=1024,
-#         prefer_horizontal=1,
-#         # stopwords=stopwords,
-#         font_path=font_path  
-#     ).generate(text)
-    
-#     # Plot and save the word cloud
-#     plt.imshow(wordcloud, interpolation='bilinear')
-#     plt.axis("off")
-#     plt.savefig(file_path)
-#     plt.close()
-    
-#     print('Image generated')
+    plt.figure(figsize=(9, 6.5), dpi=300)
+    plt.imshow(wc, interpolation='bilinear')
+    plt.axis('off')
+    plt.savefig(file_path)
+    plt.close()
+    print(f"Word cloud image '{name}' created and saved to {file_path}")
+    return file_path
 
+# working over the spider chart creation. charts perform major direction of the student using information which chat gpt filtered from the whole database
+def parse_generated_content(generated_visualization_score1,generated_visualization_score2):
+    lines = generated_visualization_score1.strip().split('\n')+generated_visualization_score2.strip().split("\n")
+    scores_dict = {}
+    for line in lines:
+        if "：" in line:
+            category, scores_str = line.split("：", 1)
+            category = category.split("（")[0]
+            scores = []
+            for score in scores_str.split(','):
+                score_clean = score.strip("）").strip()
+                if score_clean:
+                    try:
+                        scores.append(int(score_clean))
+                    except ValueError:
+                        print(f"Non-integer score encountered: '{score}'")
+                        scores.append(0)
+                else:
+                    scores.append(0)
+            if category in scores_dict and scores_dict[category]:
+                scores_dict[category].extend(scores)
+            else:
+                scores_dict[category] = scores
+    return scores_dict
+    print(scores_dict) 
 
-    
-# def generate_image(word_cloud):
-#     response = openai.images.generate(
-#         model="dall-e-3",
-#         prompt=word_cloud,
-#         size="1024x1024",
-#         quality="standard",
-#         n=1,
-#             )
-#     image_url = response.data[0].url
-#     return image_url
-
-# import httpx
-# async def download_and_save_image(image_url, save_path):
-#     async with httpx.AsyncClient() as client:
-#         response = await client.get(image_url)
-#         if response.status_code == 200:
-#             with open(save_path, 'wb') as file:
-#                 file.write(response.content)
-#             print(f"Image saved to {save_path}")
-#         else:
-#             print(f"Failed to download the image. Status code: {response.status_code}")
-
-
-# def parse_generated_content(content):
-#     lines = content.strip().split("\n")
-#     scores_dict = {}
-#     for line in lines:
-#         if "：" in line:
-#             # Fix applied here to handle lines with more than one occurrence of "："
-#             category, scores_str = line.split("：", 1)
-#             category = category.split("（")[0]
-#             scores = []
-#             for score in scores_str.split(','):
-#                 score_clean = score.strip("）").strip()
-#                 if score_clean:
-#                     try:
-#                         scores.append(int(score_clean))
-#                     except ValueError:
-#                         print(f"Non-integer score encountered: '{score}'")
-#                         scores.append(0)
-#                 else:
-#                     scores.append(0)
-#             if category in scores_dict and scores_dict[category]:
-#                 scores_dict[category].extend(scores)
-#             else:
-#                 scores_dict[category] = scores
-#     return scores_dict
-
- 
-# def preprocess_scores(scores_dict, expected_labels):
-#     processed_scores_dict = {}
-#     for label in expected_labels:
-#         if label in scores_dict:
-#             scores = scores_dict[label]
-#             # Ensure the number of scores matches the number of expected_labels
-#             if len(scores) < len(expected_labels):
-#                 scores.extend([0] * (len(expected_labels) - len(scores)))  # Fill missing scores with 0
-#             processed_scores_dict[label] = scores[:len(expected_labels)]
-#         else:
-#             processed_scores_dict[label] = [0] * len(expected_labels)  # Fill missing category with 0 scores
-#     return processed_scores_dict
-
-#     # Save the plot to a file
-#     file_name = os.path.join("/home/hello/VScode", filename)
-#     plt.savefig(file_name)
-#     plt.close()
-#     print(f"Saved: {file_name}")
+    # Save the plot to a file
+    file_name = os.path.join("/home/hello/VScode", filename)
+    plt.savefig(file_name)
+    plt.close()
+    print(f"Saved: {file_name}")
 
 
         
 def generate_gpt(data, name, basic_info, major_preferences, college_preferences, potential_major_exploration, column_AU):
-        # word_cloud = f"""请根据以下信息（被三个引号括起）得出20-25个关键词，并根据相关权重分配该关键词大小，(权重中0表示不重要，5表示非常重要). use this information: '''{basic_info},{major_preferences},{college_preferences} ''' """
-    # word_cloud = f"""translate to chinese language, ignore number, index,without explanations:''''{word},{name}'''"""
+# here generating response using chat gpt APIkey 
+    
     firstpage_summary = f""" 你的角色是一位长者。根据学生'''{name}'''提供的问卷(被3个引号括起），重新书写出一段故事性的总结，请使用信件的格式，请使用第二人称，落款为ChatIvy，不要超过500字。请与以下例子中的风格保持一致:“同学你好，在本次测试中，我看到了一位。。。;你是智慧博学的研究员，你有着永不枯竭的好奇心，强大的逻辑和异于常人的洞察力，求知欲更是驱使你站到了探索未知的第一线。理性的你注重逻辑分析，擅长抽象思考，时刻准备找出真理”: '''{name},{basic_info}, {major_preferences}, {college_preferences}''' """
     major_prompt_one = f""" 你是一位拥有多年教育经验的顶级留学咨询师，你尤其擅长了解学生的特点并进行基于基础数据的推荐。接下来你的任务是帮助我根据一份高中生的问卷为这位高中生推荐出最适合他的专业，你需要给出详细的理由并在每个中用理由到问卷里的细节信息，你同时需要给出足够的推理过程。在问卷中，学生会对每一个问题或因素进行权重的判断，不同的权重代表了这个因素在专业选择中得重要性(0表示一点都不重要，5表示非常重要)，请结合这些权重的数字给出最终推荐。你的具体任务分为两步。第一步是根据标为原始信息的信息为这位学生推荐10个最适合他的专业并给出理由。第二步是根据标为补充信息的信息从未这位学生推荐的10个最适合他的专业中筛选出3个专业并给出理由和这些专业与他的匹配度。最终结果我希望拥有一个含有10个推荐专业和理由，3个最适合专业和理由文档，每个理由都不能少于300字。当你准备好了，我就把这位学生的信息发给你。generate on the chinese language"""
     major_prompt_two = f""" 请根据以下问卷信息为用户进行第一步10个专业的推荐，在推荐的过程中请注重学生给出对于每个因素的权重。每个推荐理由不能少于300字. 每个推荐专业之间请用空行隔开，并形成序号列表'''{name},{basic_info},{major_preferences}''' """
     major_prompt_three = f"""请根据以下补充信息（被3个引号括起）继续从上述10个专业中进行第二步的3个最匹配专业的筛选。请给出推荐这三个专业的更详细的理由，理由需要要足够多的细节，证据和推理过程。理由都不能少于300字。请同时给出专业匹配度（0为最不匹配，100为最匹配）。请把三个专业分为三个自然段给出理由，匹配度需要在专业名称后面的括号内，每个自然段之间请加入空行'''{college_preferences}'''""" 
-    # print(major_preferences,college_preferences,name)
-
-    # gpt_input = f"{word_cloud}"
-    # chat_completion = openai.chat.completions.create(
-    # model="gpt-4",
-    #     messages=[{"role": "user", "content": gpt_input}],
-    #     temperature=0.2,
-    #     top_p=0.5,
-    #     frequency_penalty=0.7,
-    #     presence_penalty=0.0 
-    # )
-    # text=chat_completion.choices[0].message.content
-    # print(text)
 
     gpt_input = f"{firstpage_summary}"
     chat_completion = openai.chat.completions.create(
-    model="gpt-4",
+    model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -228,7 +146,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     gpt_input = f"{major_prompt_one},{major_prompt_two},{data}"
     # print(gpt_input)
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -240,7 +158,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
 
     gpt_input = f"{major_prompt_three}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -254,7 +172,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     
     gpt_input = f"{major_prompt_four}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -281,7 +199,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     # potential major
     gpt_input = f"{potential_major}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -298,14 +216,14 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     Major_development_history = f"""请列出以下三个专业过去50年历史中的每个专业5个最重要的转折点及其时间与影响：'''{major_list}'''。每个转折点及其影响的描述不能少于200字。请在每个转折点与下一个转折点中加入空行。请在每个专业月下一个专业之间加入空行。"""
     Cutting_edge_field = f"""请列出以下三个专业每个专业学术界的3个最前沿领域和工业界的3个最前沿领域：'''{major_list}'''。请详细描述每个领域，每个领域的描述均不能少于200字。请在每个领域与领域中加入空行。请在每个专业月下一个专业之间加入空行。"""
 
-    Visualization_p1 = f"""
-        1. 知识掌握程度（Knowledge Mastery）：这个维度可以通过测试或者评估来测量学生对于该学科的核心概念和技能的理解程度。这可能包括学生的课堂表现、作业、项目、测试和考试成绩。
-        2. 热爱程度（Interest Level）：这个维度可以通过调查或者问卷来测量学生对于该学科的兴趣。这可能包括学生选择学习这个学科的频率、在这个学科上投入的时间、以及在这个学科上的自我激励程度。
-        3. 实践应用能力（Practical Application）：这个维度可以通过评估学生对于该学科的实际应用能力。这可能包括学生在实验、项目或者实习中的表现，以及他们如何将学到的知识应用到实际问题中。
-        4. 创新能力（Innovative Capability）：这个维度可以通过观察学生在该学科中的创新表现来测量。这可能包括他们是否能提出新的观点、解决问题的新方法、或者创作新的作品。
-        5. 对未来的投入意愿（Future Commitment）：这个维度可以通过询问学生他们对于在这个学科上投入更多时间和精力的意愿来测量。这可能包括他们对于未来在这个领域内工作或者进一步学习的计划。
-        请根据以下问卷结果对该学生的各个学科分别对相应的五个维度进行打分（0-5分），并以如下格式返回：'学科名称：分数,分数,分数,分数,分数'。每个学科的分数之间请加入空行，并确保使用中文学科名称。 use this related information。'''{potential_major_exploration}''' 请直接给出分数，不需要任何分析。参考格式为5,5,5,5,5；4,5,4,4,5；5,4,5,5,4；3,3,4,3,4。请在每个专业的分数之间加入空行 """
-    Visualization_p2 = f"""请根据以下问卷结果对该学生的三个最推荐专业'''{major_list}'''分别对相应的五个维度进行打分（0-5分）：'''{basic_info},{major_preferences},{college_preferences} '''。请直接给出分数，不需要任何分析。参考格式为5,5,5,5,5；4,5,4,4,5；5,4,5,5,4；3,3,4,3,4。请在每个专业的分数之间加入空行 """
+    # Visualization_p1 = f"""
+    #     1. 知识掌握程度（Knowledge Mastery）：这个维度可以通过测试或者评估来测量学生对于该学科的核心概念和技能的理解程度。这可能包括学生的课堂表现、作业、项目、测试和考试成绩。
+    #     2. 热爱程度（Interest Level）：这个维度可以通过调查或者问卷来测量学生对于该学科的兴趣。这可能包括学生选择学习这个学科的频率、在这个学科上投入的时间、以及在这个学科上的自我激励程度。
+    #     3. 实践应用能力（Practical Application）：这个维度可以通过评估学生对于该学科的实际应用能力。这可能包括学生在实验、项目或者实习中的表现，以及他们如何将学到的知识应用到实际问题中。
+    #     4. 创新能力（Innovative Capability）：这个维度可以通过观察学生在该学科中的创新表现来测量。这可能包括他们是否能提出新的观点、解决问题的新方法、或者创作新的作品。
+    #     5. 对未来的投入意愿（Future Commitment）：这个维度可以通过询问学生他们对于在这个学科上投入更多时间和精力的意愿来测量。这可能包括他们对于未来在这个领域内工作或者进一步学习的计划。
+    #     请根据以下问卷结果对该学生的各个学科分别对相应的五个维度进行打分（0-5分），并以如下格式返回：'学科名称：分数,分数,分数,分数,分数'。每个学科的分数之间请加入空行，并确保使用中文学科名称。 use this related information。'''{potential_major_exploration}''' 请直接给出分数，不需要任何分析。参考格式为5,5,5,5,5；4,5,4,4,5；5,4,5,5,4；3,3,4,3,4。请在每个专业的分数之间加入空行 """
+    # Visualization_p2 = f"""请根据以下问卷结果对该学生的三个最推荐专业'''{major_list}'''分别对相应的五个维度进行打分（0-5分）：'''{basic_info},{major_preferences},{college_preferences} '''。请直接给出分数，不需要任何分析。参考格式为5,5,5,5,5；4,5,4,4,5；5,4,5,5,4；3,3,4,3,4。请在每个专业的分数之间加入空行 """
     Visualization_p3 = f"""请参考以下括号内段落的格式与内容和该用户的问卷信息，为用户的推荐专业'''{major_list}'''以及它们所对应的五大维度‘知识掌握程度’，‘热爱程度’，‘实践实用能力‘，‘创新能力‘，‘对未来的投入意愿‘，写一个深度分析分析并给出一段话的总结。
     (运动医学： 
     - 知识掌握程度：Eva在高中阶段对生物科学有着较高的兴趣和优势，这将有助于她在运动医学领域掌握相关的生物学知识。此外，她在自然科学学科范围中的强势学科为生物，这意味着她在生物学方面可能已经有一定的知识基础。因此，Eva在运动医学领域的知识掌握程度可能较高，得分为4。 
@@ -337,7 +255,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     Correspondence_college_recommendations
     gpt_input = f"{Correspondence_college_recommendations}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -350,7 +268,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     Correspondence_Courses
     gpt_input = f"{Correspondence_Courses}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -364,7 +282,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     Major_development_history
     gpt_input = f"{Major_development_history}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -377,7 +295,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     # Cutting_edge_field
     gpt_input = f"{Cutting_edge_field}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -387,10 +305,10 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     generated_Cutting_edge_field = chat_completion.choices[0].message.content
     print('done9')
 
-    # Visualization_p1
-    # gpt_input = f" {Visualization_p1}"
+
+    # gpt_input = f"{Visualization_p1}"
     # chat_completion = openai.chat.completions.create(
-    #     model="gpt-4",
+    #     model="gpt-3.5-turbo",
     #     messages=[{"role": "user", "content": gpt_input}],
     #     temperature=0.2,
     #     top_p=0.5,
@@ -402,7 +320,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
 
     # gpt_input = f" {Visualization_p2}"
     # chat_completion = openai.chat.completions.create(
-    #     model="gpt-4",
+    #     model="gpt-3.5-turbo",
     #     messages=[{"role": "user", "content": gpt_input}],
     #     temperature=0.2,
     #     top_p=0.5,
@@ -414,7 +332,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
 
     gpt_input = f"{Visualization_p3}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -427,7 +345,7 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     # Highschool_activities
     gpt_input = f"{Highschool_activities}"
     chat_completion = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": gpt_input}],
         temperature=0.2,
         top_p=0.5,
@@ -437,18 +355,22 @@ def generate_gpt(data, name, basic_info, major_preferences, college_preferences,
     generated_Highschool_activities = chat_completion.choices[0].message.content
     print("done13")
    
-    return generated_summary,generated_major_prompt_two, generated_major_prompt_three, major_list, generated_potential_major, generated_Correspondence_college_recommendations , generated_Correspondence_Courses, generated_Major_development_history, generated_Cutting_edge_field , generated_visualization_p3, generated_Highschool_activities
-    # return text,generated_summary,generated_visualization_score1, generated_visualization_score2, generated_major_prompt_three, major_list
+    # return major_list,generated_visualization_score1,generated_visualization_score2
+    return generated_summary,generated_major_prompt_two, generated_major_prompt_three, major_list, generated_potential_major, generated_Correspondence_college_recommendations , generated_Correspondence_Courses, generated_Major_development_history, generated_Cutting_edge_field ,generated_visualization_p3, generated_Highschool_activities
+
 @app.get("/generate_pdf")
 def main():
+# here generating pdf report in latex. open file and insert neccesary output of the responce to the latex prepared template 
     file_path_xlsx = '/home/hello/Desktop/new.xlsx'
-    name = 'Albert Yin'
+    name = 'Yicheng Xu'
    
-    data, name, basic_info, major_preferences, college_preferences, potential_major_exploration, column_AU = process_csv_and_generate_content(file_path_xlsx,name)
+    words, data, name, basic_info, major_preferences, college_preferences, potential_major_exploration, column_AU = process_csv_and_generate_content(file_path_xlsx,name)
     generated_summary,generated_major_prompt_two, generated_major_prompt_three, major_list, generated_potential_major, generated_Correspondence_college_recommendations , generated_Correspondence_Courses, generated_Major_development_history, generated_Cutting_edge_field ,generated_visualization_p3, generated_Highschool_activities=generate_gpt(data, name, basic_info, major_preferences, college_preferences, potential_major_exploration, column_AU) 
-    # text,generated_summary,generated_major_prompt_three, major_list,  generated_visualization_score1, generated_visualization_score2 = generate_gpt(word,data,name,basic_info,major_preferences,college_preferences,potential_major_exploration,column_AU) 
-    # file_path = '/home/hello/VScode/image.png'
-    # generate_wordcloud(file_path, text)  
+    # major_list,generated_visualization_score1,generated_visualization_score2 = generate_gpt(data,name,basic_info,major_preferences,college_preferences,potential_major_exploration,column_AU) 
+    font_path ='/home/hello/VScode/NotoSansSC-VariableFont_wght.ttf'
+    file_path = f"/home/hello/VScode/{name}.png"
+    file_path = word_cloud(data, file_path, font_path, name)
+    scores_dict=parse_generated_content(generated_visualization_score1,generated_visualization_score2)  
     template_path = "/home/hello/VScode/pro[2].tex"
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S") 
     pdf_path = f"/home/hello/VScode/ChatIvy专业匹配报告_{name}.tex"
@@ -464,6 +386,7 @@ def main():
         template_content = file.read()
 
     final_content = template_content.replace("%name_%", name)
+    final_content = final_content.replace("image", file_path)
     final_content = final_content.replace("%generated_summary_%", generated_summary)
     final_content = final_content.replace("%generated_major_prompt_two_%", generated_major_prompt_two)
     final_content = final_content.replace("%generated_major_prompt_three_%", generated_major_prompt_three)
