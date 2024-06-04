@@ -1,6 +1,16 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+import yaml 
+
+def load_config():
+    with open('config.yaml', 'r') as file:
+        config = load_config(file)
+        return config
+        
+config = load_config()
+jwt_secret_key=config['jwt_secret_key']
+
 
 class User(UserBase):
     id: int
@@ -12,7 +22,7 @@ class User(UserBase):
 class UserBase(BaseModel):
     username: str
     email: str
-    auth_jwt_key: str = '2e00290adfdca70fa4d2d4cbdd0573f3313b7de555730f7dd5000dc63f6d2156'
+    auth_jwt_key: str = jwt_secret_key
 
 class UserCreate(UserBase):
     password: str
