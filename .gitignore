@@ -54,6 +54,7 @@ __pycache__/
 *.vrb
 *.xdy
 *.xml
+*.xwm
 *blx.bib
 .bak 
 .mtc

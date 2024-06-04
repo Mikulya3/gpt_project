@@ -8,7 +8,6 @@ from fastapi_jwt_auth import AuthJWT
 from fastapi.encorders import jsonable_encoder
 
 
-
 auth_router = APIRouter(
     prefix = '/auth',
     tags = ['auth']
