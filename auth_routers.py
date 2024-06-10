@@ -60,13 +60,13 @@ async def login(user:LoginModel, Authorize:AuthJWT=Depends()):
 
 @auth_router.post('/users/{user_id}/responses/')
 async def create_user_response(response: schemas.UserResponseBase, user_id: int, db: Session = Depends(get_db)):
-    query = models.User_Response.__table__.insert().values(**response.dict(), user_id=user_id)
+    query = models.UserResponse.__table__.insert().values(**response.dict(), user_id=user_id)
     await db.execute(query)
     return response
 
 
 @auth_router.get('/users/{user_id}/responses/', response_model=List[schemas.UserResponse])
 async def get_user_responses(user_id: int, db: Session = Depends(get_db)):
-    query = models.User_Response.__table__.select().where(models.User_Response.user_id == user_id)
+    query = models.UserResponse.__table__.select().where(models.UserResponse.user_id == user_id)
     responses = await db.fetch_all(query)
     return responses

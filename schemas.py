@@ -64,7 +64,7 @@ class OrderModel(BaseModel):
         }
 
 
-class User_Response(BaseModel):
+class UserResponse(BaseModel):
     id:int
     user_id:int
 
