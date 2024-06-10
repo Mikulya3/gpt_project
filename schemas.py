@@ -7,33 +7,64 @@ def load_config():
     with open('config.yaml', 'r') as file:
         config = load_config(file)
         return config
-        
+
 config = load_config()
 jwt_secret_key=config['jwt_secret_key']
 
 
-class User(UserBase):
-    id: int
-    user_response: List['UserResponse'] = []
+
+class SignUpModel(BaseModel):
+    id:Optional[int]
+    username:str
+    email:str
+    password:str
+    is_staff:Optional[bool]
+    is_active:Optional[bool]
+
 
     class Config:
-        orm_mode = True
-
-class UserBase(BaseModel):
-    username: str
-    email: str
-    auth_jwt_key: str = jwt_secret_key
-
-class UserCreate(UserBase):
-    password: str
-    is_staff: Optional[bool] = False
-
-class UserLogin(UserBase):
-    password: str
+        orm_mode=True
+        schema_extra={
+            'example':{
+                "username":"johndoe",
+                "email":"johndoe@gmail.com",
+                "password":"password",
+                "is_staff":False,
+                "is_active":True
+            }
+        }
 
 
 
-class User_Response(User_ResponseBase):
+class Settings(BaseModel):
+    authjwt_secret_key:jwt_secret_key
+
+
+class LoginModel(BaseModel):
+    username:str
+    password:str
+
+
+
+class OrderModel(BaseModel):
+    id:Optional[int]
+    quantity:int
+    order_status:Optional[str]="PENDING"
+    pizza_size:Optional[str]="SMALL"
+    user_id:Optional[int]
+
+
+    class Config:
+        orm_mode=True
+        schema_extra={
+            "example":{
+                "quantity":2,
+                "pizza_size":"LARGE"
+            }
+        }
+
+
+class User_Response(BaseModel):
     id:int
     user_id:int
 
@@ -79,3 +110,6 @@ class UserResponseBase(BaseModel):
     culture_study: Optional[int]
     choosing_major: Optional[str]
     total_score: Optional[int]
+
+    class Config:
+        orm_mode = True
