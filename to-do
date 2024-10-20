@@ -1,0 +1,10 @@
+DONE:
+main
+config
+.env
+database
+models
+schemas
+apirouter
+
+

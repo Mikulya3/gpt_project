@@ -1,4 +1,4 @@
-#!/home/hello/VScode/venv/bin/python3
+#!/home/mika/Desktop/VScode/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

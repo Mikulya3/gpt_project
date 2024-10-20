@@ -1,14 +1,19 @@
-from fastapi import FastAPI
-from auth_routers import auth_router
-from fastapi_jwt_auth import AuthJWT
-from schemas import Settings
+from fastapi import FastAPI, status, Depends, HTTPException
+from app.models import Base
+from sqlalchemy.orm import Session
+from app.database import SessionLocal, engine
+from app.api_router.user_router import router
 
+app = FastAPI(title='GPT4')
+app.include_router(router)
+Base.metadata.create_all(bind=engine)
 
-app= FastAPI(title='gpt-4')
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-app.include_router(auth_router)
-# app.include_router(api_router)
-
-@AuthJWT.load_config()
 def get_config():
     return Settings()
