@@ -6,10 +6,10 @@ from datetime import datetime
 
 class User(Base):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
-    username = Column(String(30), unique=True)
-    email = Column(String(50), unique=True)
-    password = Column(String, nullable=True)
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True)
+    email = Column(String, unique=True)
+    password = Column(String)
     is_staff = Column(Boolean, default=False)
     
     user_response = relationship('User_Response', back_populates='owner')

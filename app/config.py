@@ -1,23 +1,31 @@
-import os
+from pydantic_settings import BaseSettings
 
 
-class Settings:
+class Settings(BaseSettings):
     PROJECT_NAME: str = "GPT4"
     PROJECT_VERSION: str = "1.0.0"
 
-    POSTGRES_USER: str = os.environ.get("POSTGRES_USER")
-    POSTGRES_PASSWORD: str = os.environ.get("POSTGRES_PASSWORD")
-    POSTGRES_SERVER: str = os.environ.get("POSTGRES_SERVER")
-    POSTGRES_PORT: str = os.environ.get("POSTGRES_PORT")
-    POSTGRES_DB: str = os.environ.get("POSTGRES_DB")
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_SERVER: str
+    POSTGRES_PORT: str
+    POSTGRES_DB: str
 
-    DATABASE_URL = (
-        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@"
-        f"{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
-    )
-    ENV: str = os.environ.get("ENV")
-    SECRET_KEY: str = os.environ.get("SECRET_KEY")
-    ALGORITHM: str = os.environ.get("ALGORITHM")
-    
-    
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ENV: str = "development"
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return (
+            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+            f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    class Config:
+        extra = "ignore" 
+        env_file = ".env"
+
+
 settings = Settings()
+

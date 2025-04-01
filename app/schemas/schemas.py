@@ -10,16 +10,18 @@ class UserCreate(BaseModel):
     password: str
     
     class Config:
-        orm_mode = True
-        
-    
-class UserResponse(BaseModel):
+        from_attributes = True
+                
+                
+class UserOut(BaseModel):
+    id: int
     username: str
-    email: EmailStr  
+    email: EmailStr
+    is_staff: bool
 
     class Config:
-        from_attributes = True 
-        
+        from_attributes = True
+
          
 class LoginUser(BaseModel):
     email: EmailStr
@@ -48,6 +50,12 @@ class ResetPassword(BaseModel):
     
     class Config:
         orm_mode = True 
+
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
 
 
 class UserResponseBase(BaseModel):
