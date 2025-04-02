@@ -14,19 +14,27 @@ algorithm = settings.ALGORITHM
 
 
 router = APIRouter()
+
+
 class AuthXConfig:
     JWT_SECRET_KEY = secret_key
     JWT_ALGORITHM = algorithm
     JWT_TOKEN_LOCATION = ["cookies", "headers"]
     JWT_COOKIE_CSRF_PROTECT = False
     JWT_CSRF_COOKIE_NAME = "csrf_access_token"
-    JWT_COOKIE_SAME_SITE = "Strict"
+    JWT_COOKIE_SAMESITE = "Strict"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=30)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
     JWT_ENCODE_AUDIENCE = None
     JWT_ENCODE_ISSUER = None
     private_key = secret_key 
-
+    JWT_ACCESS_COOKIE_NAME = "access_token"
+    JWT_ACCESS_COOKIE_PATH = "/"
+    JWT_ACCESS_CSRF_COOKIE_NAME = "csrf_access_token" 
+    JWT_ACCESS_CSRF_COOKIE_PATH = "/"
+    JWT_COOKIE_DOMAIN = None
+    JWT_COOKIE_SECURE = settings.ENV == "production"
+    JWT_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 
     @classmethod
     def has_location(cls, location: str) -> bool:
@@ -48,27 +56,25 @@ def hashed_password(password):
         
         
 @router.post("/login")
-def login_user(login_data: LoginUser, response: Response, db: Session = Depends(get_db)):
+def login_user(login_data: LoginUser, response: Response, db: Session = Depends(get_db)
+):
     user = db.query(User).filter(User.email == login_data.email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-        
+
     if not verify_password(login_data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password or email"
         )
+
     token = security.create_access_token(uid=user.email)
-    response.set_cookie(
-        key="csrf_access_token",
-        value=token,
-        httponly=True,
-        secure=settings.ENV == "production",
-        samesite="Strict"
-    )
+
+    security._set_cookies(response=response, type="access", token=token)
+
     return {"access_token": token, "token_type": "bearer"}
 
 

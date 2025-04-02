@@ -9,6 +9,7 @@ app = FastAPI(title='GPT4')
 app.include_router(router)
 Base.metadata.create_all(bind=engine)
 
+
 def get_db():
     db = SessionLocal()
     try:
