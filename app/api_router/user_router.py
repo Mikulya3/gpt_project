@@ -13,7 +13,7 @@ secret_key = settings.SECRET_KEY
 algorithm = settings.ALGORITHM
 
 
-router = APIRouter()
+user_router = APIRouter()
 
 
 class AuthXConfig:
@@ -55,7 +55,7 @@ def hashed_password(password):
     return pwd_context.hash(password)      
         
         
-@router.post("/login")
+@user_router.post("/login")
 def login_user(login_data: LoginUser, response: Response, db: Session = Depends(get_db)
 ):
     user = db.query(User).filter(User.email == login_data.email).first()
@@ -78,7 +78,7 @@ def login_user(login_data: LoginUser, response: Response, db: Session = Depends(
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.post("/user/", response_model=UserOut, status_code=201)
+@user_router.post("/user/", response_model=UserOut, status_code=201)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(
         (User.email == user.email) | (User.username == user.username)).first()
@@ -103,7 +103,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 def get_userdb(db: Session, user_id: int):
     return db.query(User).filter(User.id == user_id).first()
 
-@router.get("/users/{user_id}", response_model=UserOut)
+@user_router.get("/users/{user_id}", response_model=UserOut)
 def get_user(user_id: int, db: Session = Depends(get_db)):
     user = get_userdb(db, user_id)
     if not user:
@@ -111,7 +111,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return UserOut.model_validate(user)
 
 
-@router.put("/users/{user_id}", response_model=UserOut)
+@user_router.put("/users/{user_id}", response_model=UserOut)
 def update_user(
     user_id: int,
     update_data: UserUpdate = Body(...),
@@ -133,8 +133,8 @@ def update_user(
     return UserOut.model_validate(db_user)
 
 
-@router.delete("/users/{user_id}", response_model=UserCreate)
-def remove_user(user_id:int, db:Session=Depends(get_db)):
+@user_router.delete("/users/{user_id}", response_model=UserCreate)
+def remove_user(user_id: int, db: Session=Depends(get_db)):
     db_user = db.query(User).filter(User.id==user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
