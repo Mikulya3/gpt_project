@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ENV: str = "development"
-
+    API_KEY: str 
     @property
     def DATABASE_URL(self) -> str:
         return (
