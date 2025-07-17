@@ -5,11 +5,10 @@ from app.database.models import User_Response
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 import json
+from app.api_router.user_router import get_current_user
 
 
-ApiKey = settings.API_KEY
-
-openai.api_key = ApiKey
+openai.api_key = settings.API_KEY
 
 
 def call_gpt(prompt: str):
@@ -24,8 +23,7 @@ def call_gpt(prompt: str):
     return response.choices[0].message.content
 
 
-def sorting_data(student_name: str, db: Session = Depends(get_db)):
-    user_response = db.query(User_Response).filter(User_Response.student_name == student_name).first()
+def sorting_data(user_response: User_Response):
     if not user_response:
         raise HTTPException(status_code=404, detail="User not found") 
     context = {
@@ -59,7 +57,7 @@ def sorting_data(student_name: str, db: Session = Depends(get_db)):
             "electrical_engineering": user_response.electrical_engineering,
             "mechanical_engineering": user_response.mechanical_engineering,
             "data_science": user_response.data_science,
-            "civil_and_environment_engineering": user_response.civil_and_enviroment_engineering,
+            "civil_and_environment_engineering": user_response.civil_and_environment_engineering,
             "aerospace_engineering": user_response.aerospace_engineering,
             "biomedical_engineering": user_response.biomedical_engineering,
             "chemical_engineering": user_response.chemical_engineering,
@@ -102,9 +100,6 @@ def sorting_data(student_name: str, db: Session = Depends(get_db)):
             "post_graduation_plan_weight": user_response.post_graduation_plan_weight,
             "expected_annual_income": user_response.expected_annual_income,
             "income_weight": user_response.income_weight,
-            "career_prospects_preference": user_response.career_prospects_preference,
-            "career_prospects_details": user_response.career_prospects_details,
-            "career_prospects_weight": user_response.career_prospects_weight,
              },
         "socioeconomic_and_financial_factors": {
             
@@ -213,7 +208,7 @@ Student’s Extracurricular and Hobby Profile:
 End the message by encouraging the student to keep exploring their passions, as those often illuminate the best paths.
 """
 
-    final_summary_prompt = f"""
+    final_summary = f"""
 You are a professional global education consultant with expertise in student profiling, university admissions, and scholarship advising.
 Speak directly to the student using the second person ("you").
 Based on all the following information about a student, provide a comprehensive final advisory summary (max 600 words). Your task is to help the student:
@@ -224,7 +219,7 @@ Based on all the following information about a student, provide a comprehensive 
 4. **Identify areas of weakness** (academic or personal) and suggest online or offline **courses to improve those skills**.
 5. Based on their overall personality, traits, interests, and achievements — **suggest 2 or 3 potential occupations or career paths** that align with their abilities and goals.
 
-Be specific and encouraging. Avoid generic advice. Tailor all insights to the student's actual context, strengths, preferences, and constraints.End the letter with: "Sincerely, MerAi".
+Be specific and encouraging. Avoid generic advice. Tailor all insights to the student's actual context, strengths, preferences, and constraints.".
 
 Here is the student's information:
 - Student Profile: {json.dumps(context['student_profile'], ensure_ascii=False)}
@@ -242,7 +237,7 @@ End the response with a warm, empowering message to the student, showing confide
         "academic_reflection": subject_interests_prompt,
         "financial_guidance": socioeconomic_prompt,
         "career_from_hobbies": extracurriculars_prompt,
-        "final_context": final_summary_prompt,
+        "final_summary": final_summary
         }
     
     result = {

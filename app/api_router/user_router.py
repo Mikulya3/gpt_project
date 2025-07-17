@@ -1,49 +1,25 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, status, Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import jwt
 from sqlalchemy.orm import Session
 from app.database.models import User
 from app.schemas.schemas import UserCreate, LoginUser, ChangePassword, UserOut, UserUpdate
 from passlib.context import CryptContext
-from authx import AuthX
+from authx import AuthX, TokenPayload, AuthXConfig
 from app.database.db import get_db
-from app.config import settings
-from datetime import timedelta
+from app.config import settings, mail_config
+from datetime import timedelta, datetime
+import datetime 
+from fastapi_mail import FastMail, MessageSchema
 
-
-secret_key = settings.SECRET_KEY
-algorithm = settings.ALGORITHM
-
-
+security_scheme = HTTPBearer()
 user_router = APIRouter()
+config = AuthXConfig()
+config.JWT_SECRET_KEY: str = settings.SECRET_KEY
+config.JWT_ACCESS_COOKIE_NAME: str = "access_token"
 
 
-class AuthXConfig:
-    JWT_SECRET_KEY = secret_key
-    JWT_ALGORITHM = algorithm
-    JWT_TOKEN_LOCATION = ["cookies", "headers"]
-    JWT_COOKIE_CSRF_PROTECT = False
-    JWT_CSRF_COOKIE_NAME = "csrf_access_token"
-    JWT_COOKIE_SAMESITE = "Strict"
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=30)
-    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
-    JWT_ENCODE_AUDIENCE = None
-    JWT_ENCODE_ISSUER = None
-    private_key = secret_key 
-    JWT_ACCESS_COOKIE_NAME = "access_token"
-    JWT_ACCESS_COOKIE_PATH = "/"
-    JWT_ACCESS_CSRF_COOKIE_NAME = "csrf_access_token" 
-    JWT_ACCESS_CSRF_COOKIE_PATH = "/"
-    JWT_COOKIE_DOMAIN = None
-    JWT_COOKIE_SECURE = settings.ENV == "production"
-    JWT_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-
-    @classmethod
-    def has_location(cls, location: str) -> bool:
-        return location in cls.JWT_TOKEN_LOCATION
-
-
-security = AuthX(config=AuthXConfig())
-
-
+security = AuthX(config=config)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -127,6 +103,8 @@ def update_user(
         db_user.email = update_data.email
     if update_data.password:
         db_user.password = hashed_password(update_data.password)
+    if update_data.is_staff is not None:
+        db_user.is_staff = update_data.is_staff
 
     db.commit()
     db.refresh(db_user)
@@ -143,3 +121,53 @@ def remove_user(user_id: int, db: Session=Depends(get_db)):
     return db_user
 
 
+def create_reset_token(email: str):
+    expire_time = datetime.utcnow() + timedelta(minutes=30)
+    return jwt.encode(
+        {"sub": email, "exp": expire_time},
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+
+
+@user_router.post("/users/forgot_password")
+async def forget_password(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404,  detail="User not found")
+    token = create_reset_token(user.email)
+    reset_link = f"http://http://127.0.0.1:8000/reset_password?token={token}"
+    message = MessageSchema(
+        subject="password reset password", 
+        recipients=[user.email],
+        body=f"Click the link to reset your password: {reset_link}",
+        subtype="plain"
+    )
+    fm = FastMail(mail_config)
+    await fm.send_message(message)
+    
+    return {"message": "Password reset link sent to your email."}
+
+
+def check_admin(
+    db: Session = Depends(get_db),
+    token_payload: TokenPayload = Depends(security.access_token_required)
+):
+    email = token_payload.sub
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user or not user.is_staff:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return user
+
+
+@user_router.get("/admin/users/", response_model=list[UserOut])
+def get_all_users(db: Session = Depends(get_db), _: User = Depends(check_admin), __: HTTPAuthorizationCredentials = Depends(security_scheme)):
+    return db.query(User).all()
+
+
+def get_current_user(token_payload=Depends(security.access_token_required)):
+    return token_payload.sub 

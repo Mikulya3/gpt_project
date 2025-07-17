@@ -12,4 +12,6 @@ fastapi-security
 alembic
 sqladmin
 authx
-
+openai
+fastapi_mail
+weasyprint
