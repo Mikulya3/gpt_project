@@ -34,17 +34,10 @@ class LoginUser(BaseModel):
 
 class ForgotPassword(BaseModel):
     email: EmailStr
-
-
-class ChangePassword(BaseModel):
-    old_password: str
-    new_password: str
-    
-    class Congig:
-        orm_mode = True
-        
+   
 
 class ResetPassword(BaseModel):
+    token: str
     new_password: str
     confirm_password: str
     

@@ -3,7 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
 from sqlalchemy.orm import Session
 from app.database.models import User
-from app.schemas.schemas import UserCreate, LoginUser, ChangePassword, UserOut, UserUpdate
+from app.schemas.schemas import UserCreate, LoginUser, ForgotPassword, ResetPassword, UserOut, UserUpdate
 from passlib.context import CryptContext
 from authx import AuthX, TokenPayload, AuthXConfig
 from app.database.db import get_db
@@ -122,7 +122,7 @@ def remove_user(user_id: int, db: Session=Depends(get_db)):
 
 
 def create_reset_token(email: str):
-    expire_time = datetime.utcnow() + timedelta(minutes=30)
+    expire_time = datetime.datetime.utcnow() + timedelta(minutes=30)
     return jwt.encode(
         {"sub": email, "exp": expire_time},
         settings.SECRET_KEY,
@@ -130,23 +130,86 @@ def create_reset_token(email: str):
     )
 
 
-@user_router.post("/users/forgot_password")
-async def forget_password(email: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email).first()
+def decode_reset_token(token: str):
+    try:
+        payload =  jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return payload.get("sub")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid token") 
+
+
+@user_router.post("/forgot_password")
+async def forget_password(request: ForgotPassword, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
     if not user:
         raise HTTPException(status_code=404,  detail="User not found")
     token = create_reset_token(user.email)
-    reset_link = f"http://http://127.0.0.1:8000/reset_password?token={token}"
+    reset_link = f"http://127.0.0.1:8000/reset_password?token={token}"
     message = MessageSchema(
-        subject="password reset password", 
+        subject="reset password", 
         recipients=[user.email],
-        body=f"Click the link to reset your password: {reset_link}",
-        subtype="plain"
-    )
+        body=f"""
+        <p>Greetings!</p>
+        <p>to reset password, please click on the button:</p>
+        <a href="{reset_link}" style="
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;">
+            Сбросить пароль
+        </a>
+        <p>If you did not request a password reset, ignore this letter.</p>
+    """,
+    subtype="html"
+)
     fm = FastMail(mail_config)
     await fm.send_message(message)
     
     return {"message": "Password reset link sent to your email."}
+
+
+@user_router.post("/reset_password")
+def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
+    if data.new_password != data.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+    
+    email = decode_reset_token(data.token)
+    if not email:
+        raise HTTPException(status_code=400,  detail="invalid token or expired")
+    
+    user = db.query(User).filter(User.email == email).first()   
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+    
+    user.password = hashed_password(data.new_password)
+    db.commit()
+    return {"message": "Password reset successfully"}
+
+
+@user_router.get("/reset_password")
+def check_token(token: str):
+    email = decode_reset_token(token)
+    if not email:
+        raise HTTPException(status_code=400, detail="Token invalid or expired")
+    return {"message": "Token valid"}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def check_admin(

@@ -10,11 +10,11 @@ from app.config import settings
 from app.database.models import User
 from app.api_router.user_router import get_current_user
 
-pdf_router = APIRouter()
+pdf_router = APIRouter(prefix="/create_pdf", tags=["create_pdf"])
 
 
 
-@pdf_router.get("/generate_prompts", response_model=dict)
+@pdf_router.get("/", response_model=dict)
 def generation(current_user: str = Depends(get_current_user), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == current_user).first()
     if not user:
