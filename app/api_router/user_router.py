@@ -161,7 +161,7 @@ async def forget_password(request: ForgotPassword, db: Session = Depends(get_db)
             text-decoration: none;
             border-radius: 6px;
             font-weight: bold;">
-            Сбросить пароль
+            Reset Password
         </a>
         <p>If you did not request a password reset, ignore this letter.</p>
     """,
