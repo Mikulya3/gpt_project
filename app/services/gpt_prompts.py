@@ -145,8 +145,7 @@ Instructions:
 - End the letter with: "Sincerely, MerAi".
 The tone should be warm, respectful, and slightly philosophical — like a mentor guiding a young learner. Reflect on the student’s personality, academic interests, and future aspirations using the data below. Highlight their strengths, motivation, and potential.
 
-Student Profile:
-'''Basic Info:
+Basic Info:
 {json.dumps(student_profile, ensure_ascii=False, indent=4)}
 
 Personality Traits:
@@ -156,11 +155,11 @@ Major Interests:
 {json.dumps(major_interests, ensure_ascii=False, indent=4)}
 
 Career Aspirations:
-{json.dumps(career_and_future_aspirations, ensure_ascii=False, indent=4)}'''  
+{json.dumps(career_and_future_aspirations, ensure_ascii=False, indent=4)}  
 """
 
     subject_interests_prompt = f"""
-You are an experienced academic advisor and university counselor. Based on the '''{student_profile["name"]}''' academic background and their interests in various majors, write a thoughtful and inspiring narrative to help the student reflect on their educational path.
+You are an experienced academic advisor and university counselor. Based on the academic background and their interests in various majors, write a thoughtful and inspiring narrative to help the student reflect on their educational path.
 Speak directly to the student using the second person ("you"). Use a warm and supportive tone. Begin by acknowledging their academic strengths and interests, then explore how those align with potential college majors. The message should offer encouragement, insight, and personalized advice. Stay under 500 words.
 
 Student's Academic Profile:
@@ -229,7 +228,8 @@ Here is the student's information:
 - Financial and Socioeconomic Info: {json.dumps(context['socioeconomic_and_financial_factors'], ensure_ascii=False)}
 - Extracurriculars & Hobbies: {json.dumps(context['extracurriculars_and_hobbies'], ensure_ascii=False)}
 
-End the response with a warm, empowering message to the student, showing confidence in their future and motivating them to act on your guidance.
+End the response with a warm, empowering message to the student, showing confidence in their future and motivating them to act on your guidance.  
+Sign the message with: "Good Luck!".
 """
 
     gpt_prompts = {

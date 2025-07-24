@@ -8,9 +8,11 @@ from passlib.context import CryptContext
 from authx import AuthX, TokenPayload, AuthXConfig
 from app.database.db import get_db
 from app.config import settings, mail_config
+from fastapi_mail import FastMail, MessageSchema
 from datetime import timedelta, datetime
 import datetime 
-from fastapi_mail import FastMail, MessageSchema
+from celery import Celery
+
 
 security_scheme = HTTPBearer()
 user_router = APIRouter()
@@ -21,6 +23,7 @@ config.JWT_ACCESS_COOKIE_NAME: str = "access_token"
 
 security = AuthX(config=config)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+celery_app = Celery('worker', broker=settings.REDIS_BROKER_URL, backend=settings.CELERY_BACKEND_URL)
 
 
 def verify_password(plain_password, hashed_password):
@@ -140,6 +143,8 @@ def decode_reset_token(token: str):
         raise HTTPException(status_code=400, detail="Invalid token") 
 
 
+
+@celery_app.task
 @user_router.post("/forgot_password")
 async def forget_password(request: ForgotPassword, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email).first()
@@ -165,12 +170,14 @@ async def forget_password(request: ForgotPassword, db: Session = Depends(get_db)
         </a>
         <p>If you did not request a password reset, ignore this letter.</p>
     """,
-    subtype="html"
+        subtype="html"
 )
     fm = FastMail(mail_config)
     await fm.send_message(message)
     
     return {"message": "Password reset link sent to your email."}
+
+
 
 
 @user_router.post("/reset_password")
@@ -197,18 +204,6 @@ def check_token(token: str):
     if not email:
         raise HTTPException(status_code=400, detail="Token invalid or expired")
     return {"message": "Token valid"}
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

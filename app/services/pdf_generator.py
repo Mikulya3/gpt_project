@@ -7,11 +7,11 @@ def generate_pdf(data, output_path):
     environment = Environment(loader=FileSystemLoader("app/templates"))
     report = environment.get_template("template.html")
 
-    logo_path = os.path.abspath("app/static/images/logo1.jpg")
+    logo_path = "file://"+os.path.abspath("app/static/logo1.jpg")
 
     html_content = report.render(
         name=data["student_profile"]["name"],
-        personal_info=data["personal_letter"],
+        personal_letter=data["personal_letter"],
         academic_reflection=data["academic_reflection"],
         financial_guidance=data["financial_guidance"],
         career_from_hobbies=data["career_from_hobbies"],

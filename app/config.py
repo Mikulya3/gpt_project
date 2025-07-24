@@ -1,5 +1,9 @@
 from pydantic_settings import BaseSettings
 from fastapi_mail import ConnectionConfig
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -25,6 +29,11 @@ class Settings(BaseSettings):
     MAIL_STARTTLS: bool = True
     MAIL_SSL_TLS: bool = False
     USE_CREDENTIALS: bool = True
+   
+    
+    # Celery configuration
+    REDIS_BROKER_URL: str = os.getenv("REDIS_BROKER_URL")
+    CELERY_BACKEND_URL: str = os.getenv("CELERY_BACKEND_URL") 
     
     
     @property
