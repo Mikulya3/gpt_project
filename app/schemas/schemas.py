@@ -9,8 +9,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
                 
                 
 class UserOut(BaseModel):
@@ -19,30 +18,26 @@ class UserOut(BaseModel):
     email: EmailStr
     is_staff: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-       
+
 class LoginUser(BaseModel):
     email: EmailStr
     password: str
 
-    class Config:
-        orm_mode = True
-        use_enum_values = True
-
+    model_config = ConfigDict(from_attributes=True)
+        
 
 class ForgotPassword(BaseModel):
     email: EmailStr
-   
+
 
 class ResetPassword(BaseModel):
     token: str
     new_password: str
     confirm_password: str
     
-    class Config:
-        orm_mode = True 
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdate(BaseModel):
