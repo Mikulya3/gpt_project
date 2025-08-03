@@ -14,6 +14,7 @@ import datetime
 from celery import Celery
 
 
+
 security_scheme = HTTPBearer()
 user_router = APIRouter()
 config = AuthXConfig()

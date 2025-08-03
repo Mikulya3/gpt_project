@@ -125,7 +125,7 @@ def sorting_data(user_response: User_Response):
     return context
 
 
-def built_promts(context: dict):
+def built_prompts(context: dict):
     if not context:
         raise HTTPException(status_code=404, detail="Context not found")
     

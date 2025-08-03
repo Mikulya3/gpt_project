@@ -31,6 +31,13 @@ app.add_middleware(
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
+
+@app.get("/", status_code=status.HTTP_200_OK)
+def read_root():
+    return {"message": "OK"}
+
+
+
 # Route to render the HTML
 # @app.get("/report", response_class=HTMLResponse)
 # def get_report(request: Request):

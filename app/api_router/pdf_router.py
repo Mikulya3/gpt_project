@@ -3,7 +3,7 @@ from app.database.models import User_Response
 from sqlalchemy.orm import Session
 from app.database.db import get_db
 from app.schemas.schemas import UserResponseBase
-from app.services.gpt_prompts import sorting_data, built_promts
+from app.services.gpt_prompts import sorting_data, built_prompts
 import uuid
 from app.services.pdf_generator import generate_pdf
 from app.config import settings
@@ -24,7 +24,7 @@ def generation(current_user: str = Depends(get_current_user), db: Session = Depe
     if not context:
         raise HTTPException(status_code=404, detail="No context data found for this user")
     
-    gpt_outputs = built_promts(context)
+    gpt_outputs = built_prompts(context)
     data = {**context, **gpt_outputs}
     filename = f"{data['student_profile']['name'].replace(' ', '_')}_{uuid.uuid4().hex[:6]}.pdf"
     output_path = f"app/generated_reports/{filename}"
