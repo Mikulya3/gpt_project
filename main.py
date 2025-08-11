@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.requests import Request
 from fastapi.staticfiles import StaticFiles
+from prometheus_fastapi_instrumentator import Instrumentator
 
 
 
@@ -35,6 +36,9 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 @app.get("/", status_code=status.HTTP_200_OK)
 def read_root():
     return {"message": "OK"}
+
+
+Instrumentator().instrument(app).expose(app)
 
 
 

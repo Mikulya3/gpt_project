@@ -12,7 +12,7 @@ from fastapi_mail import FastMail, MessageSchema
 from datetime import timedelta, datetime
 import datetime 
 from celery import Celery
-
+from app.tasks.email import send_reset_email
 
 
 security_scheme = HTTPBearer()
@@ -145,40 +145,50 @@ def decode_reset_token(token: str):
 
 
 
-@celery_app.task
+# @celery_app.task
+# @user_router.post("/forgot_password")
+# async def forget_password(request: ForgotPassword, db: Session = Depends(get_db)):
+#     user = db.query(User).filter(User.email == request.email).first()
+#     if not user:
+#         raise HTTPException(status_code=404,  detail="User not found")
+#     token = create_reset_token(user.email)
+#     reset_link = f"http://127.0.0.1:8000/reset_password?token={token}"
+#     message = MessageSchema(
+#         subject="reset password", 
+#         recipients=[user.email],
+#         body=f"""
+#         <p>Greetings!</p>
+#         <p>to reset password, please click on the button:</p>
+#         <a href="{reset_link}" style="
+#             display: inline-block;
+#             padding: 12px 24px;
+#             background-color: #4CAF50;
+#             color: white;
+#             text-decoration: none;
+#             border-radius: 6px;
+#             font-weight: bold;">
+#             Reset Password
+#         </a>
+#         <p>If you did not request a password reset, ignore this letter.</p>
+#     """,
+#         subtype="html"
+# )
+#     fm = FastMail(mail_config)
+#     await fm.send_message(message)
+    
+#     return {"message": "Password reset link sent to your email."}
+
 @user_router.post("/forgot_password")
 async def forget_password(request: ForgotPassword, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email).first()
     if not user:
-        raise HTTPException(status_code=404,  detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found")
+    
     token = create_reset_token(user.email)
     reset_link = f"http://127.0.0.1:8000/reset_password?token={token}"
-    message = MessageSchema(
-        subject="reset password", 
-        recipients=[user.email],
-        body=f"""
-        <p>Greetings!</p>
-        <p>to reset password, please click on the button:</p>
-        <a href="{reset_link}" style="
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;">
-            Reset Password
-        </a>
-        <p>If you did not request a password reset, ignore this letter.</p>
-    """,
-        subtype="html"
-)
-    fm = FastMail(mail_config)
-    await fm.send_message(message)
     
+    send_reset_email.delay(user.email, reset_link)
     return {"message": "Password reset link sent to your email."}
-
-
 
 
 @user_router.post("/reset_password")
@@ -196,6 +206,7 @@ def reset_password(data: ResetPassword, db: Session = Depends(get_db)):
     
     user.password = hashed_password(data.new_password)
     db.commit()
+    print('password reset')
     return {"message": "Password reset successfully"}
 
 
