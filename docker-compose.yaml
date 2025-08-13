@@ -76,9 +76,11 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    - grafana_data:/var/lib/grafana
+    - ./monitoring/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+    environment:
+    - GF_SECURITY_ADMIN_USER=admin
+    - GF_SECURITY_ADMIN_PASSWORD=admin
     networks:
       - monitoring
     depends_on:

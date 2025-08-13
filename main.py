@@ -38,7 +38,9 @@ def read_root():
     return {"message": "OK"}
 
 
-Instrumentator().instrument(app).expose(app)
+@app.on_event("startup")
+def _startup():
+    Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 
