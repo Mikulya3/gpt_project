@@ -16,11 +16,20 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 
 app = FastAPI(title='GPT4')
+
+instrumentator = Instrumentator()
+instrumentator.instrument(app)
+
 Base.metadata.create_all(bind=engine)
 app.include_router(user_router)
 app.include_router(response_router)
 app.include_router(pdf_router)
 
+@app.on_event("startup")
+async def _startup():
+    instrumentator.expose(app, endpoint="/metrics", include_in_schema=False)
+    
+    
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost", "http://127.0.0.1:8000"],
@@ -38,9 +47,6 @@ def read_root():
     return {"message": "OK"}
 
 
-@app.on_event("startup")
-def _startup():
-    Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 

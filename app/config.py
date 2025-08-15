@@ -1,26 +1,26 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import computed_field
 from fastapi_mail import ConnectionConfig
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "GPT4"
-    PROJECT_VERSION: str = "1.0.0"
-
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_SERVER: str
-    POSTGRES_PORT: str
+    POSTGRES_PORT: int
     POSTGRES_DB: str
+    BASE_URL: str = "http://localhost:8000"
+
+    debug: bool | None = None 
 
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ENV: str = "development"
     API_KEY: str 
-    # Email configuration
+
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
     MAIL_FROM: str
@@ -29,23 +29,22 @@ class Settings(BaseSettings):
     MAIL_STARTTLS: bool = True
     MAIL_SSL_TLS: bool = False
     USE_CREDENTIALS: bool = True
-   
-    
-    # Celery configuration
-    REDIS_BROKER_URL: str = os.getenv("REDIS_BROKER_URL")
-    CELERY_BACKEND_URL: str = os.getenv("CELERY_BACKEND_URL") 
-    
-    
+
+    REDIS_BROKER_URL: str
+    CELERY_BACKEND_URL: str
+
+    @computed_field
     @property
     def DATABASE_URL(self) -> str:
         return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-            f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
-    class Config:
-        extra = "ignore" 
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore"  
+    )
 
 
 settings = Settings()

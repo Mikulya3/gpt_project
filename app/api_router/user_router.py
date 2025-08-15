@@ -7,8 +7,7 @@ from app.schemas.schemas import UserCreate, LoginUser, ForgotPassword, ResetPass
 from passlib.context import CryptContext
 from authx import AuthX, TokenPayload, AuthXConfig
 from app.database.db import get_db
-from app.config import settings, mail_config
-from fastapi_mail import FastMail, MessageSchema
+from app.config import settings
 from datetime import timedelta, datetime
 import datetime 
 from celery import Celery
@@ -136,7 +135,7 @@ def create_reset_token(email: str):
 
 def decode_reset_token(token: str):
     try:
-        payload =  jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload.get("sub")
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=400, detail="Token has expired")
@@ -185,7 +184,7 @@ async def forget_password(request: ForgotPassword, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="User not found")
     
     token = create_reset_token(user.email)
-    reset_link = f"http://127.0.0.1:8000/reset_password?token={token}"
+    reset_link = f"{settings.BASE_URL}//reset_password?token={token}"
     
     send_reset_email.delay(user.email, reset_link)
     return {"message": "Password reset link sent to your email."}

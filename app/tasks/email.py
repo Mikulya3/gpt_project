@@ -4,13 +4,13 @@ from app.config import mail_config
 from app.celery_app import celery_app
 
 
-@celery_app.task(name="app.tasks.email.send_reset_email")
-def send_reset_email(to_email: str, reset_link: str):
+@celery_app.task(name="app.tasks.email.send_reset_email", bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
+def send_reset_email(self, to_email: str, reset_link: str):
     message = MessageSchema(
         subject="reset password", 
         recipients=[to_email],
         body=f"""
-        <p>Greetings!</p>
+        <p>HI, its a MerAi app!</p>
         <p>to reset password, please click on the button:</p>
         <a href="{reset_link}" style="
             display: inline-block;
@@ -26,5 +26,5 @@ def send_reset_email(to_email: str, reset_link: str):
     """,
         subtype="html"
     )
-    asyncio.run(FastMail(mail_config).send_message(message)) 
-    return {"message": "Password reset link sent to your email."}
+    asyncio.run(FastMail(mail_config).send_message(message))
+    return "sent"
