@@ -15,5 +15,6 @@ celery_app.conf.update(
 celery_app.autodiscover_tasks(["app.tasks"])
 
 import app.tasks.email 
+import app.tasks.pdf
 
 

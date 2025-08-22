@@ -1,13 +1,16 @@
+import os
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
-import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES = os.path.join(BASE_DIR, "..", "templates")
+STATIC = os.path.join(BASE_DIR, "..", "static")
 
 
 def generate_pdf(data, output_path):
-    environment = Environment(loader=FileSystemLoader("app/templates"))
-    report = environment.get_template("template.html")
-
-    logo_path = "file://"+os.path.abspath("app/static/logo1.jpg")
+    env = Environment(loader=FileSystemLoader(TEMPLATES))
+    report = env.get_template("template.html")
+    logo_path = "file://" + os.path.join(STATIC, "logo1.jpg")
 
     html_content = report.render(
         name=data["student_profile"]["name"],
@@ -19,6 +22,5 @@ def generate_pdf(data, output_path):
         logo_path=logo_path,
         for_pdf=True,
     )
-
     HTML(string=html_content).write_pdf(output_path)
     return output_path

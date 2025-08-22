@@ -19,6 +19,16 @@ services:
       timeout: 5s
       retries: 5
 
+
+  app:
+    build: .
+    volumes:
+      - .:/app
+      - ./app/generated_reports:/app/generated_reports
+    depends_on:
+      - db
+
+
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -54,6 +64,10 @@ services:
       - "8000:8000"
     networks:
       - monitoring
+    volumes:
+      - .:/app
+      - ./app/generated_reports:/app/generated_reports 
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   celery_worker:
     build:
@@ -75,6 +89,9 @@ services:
     command: celery -A app.celery_app.celery_app worker --loglevel=info -Q default
     networks:
       - monitoring
+    volumes:
+      - .:/app
+      - ./app/generated_reports:/app/generated_reports
 
 
 
@@ -102,6 +119,7 @@ volumes:
   prometheus_data:
   grafana_data:
   postgres_data:
+  generated_reports:
 
 networks:
   monitoring:

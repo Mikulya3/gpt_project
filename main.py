@@ -40,7 +40,7 @@ app.add_middleware(
 
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
+app.mount("/reports", StaticFiles(directory="app/generated_reports"), name="reports")
 
 @app.get("/", status_code=status.HTTP_200_OK)
 def read_root():

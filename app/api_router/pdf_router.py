@@ -9,6 +9,8 @@ from app.services.pdf_generator import generate_pdf
 from app.config import settings
 from app.database.models import User
 from app.api_router.user_router import get_current_user
+from app.tasks.pdf import generate_pdf_task
+from app.celery_app import celery_app
 
 pdf_router = APIRouter(prefix="/create_pdf", tags=["create_pdf"])
 
@@ -26,14 +28,22 @@ def generation(current_user: str = Depends(get_current_user), db: Session = Depe
     
     gpt_outputs = built_prompts(context)
     data = {**context, **gpt_outputs}
-    filename = f"{data['student_profile']['name'].replace(' ', '_')}_{uuid.uuid4().hex[:6]}.pdf"
-    output_path = f"app/generated_reports/{filename}"
-    generate_pdf(data, output_path) 
+    task = generate_pdf_task.delay(data)
+    return {"task_id": task.id, "status": "PDF generation in progress"}
     
-    return {
-        "pdf_url": output_path,
-        **gpt_outputs
-    }
+
+@pdf_router.get("/status/{task_id}")
+def get_pdf_status(task_id: str):
+    task = celery_app.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        return {"status": "Pending..."}
+    elif task.state == 'SUCCESS':
+        return {"status": "Completed", "pdf_url": task.result['pdf_url']}
+    elif task.state == 'FAILURE':
+        return {"status": "Failed", "error": str(task.info)}
+    else:
+        return {"status": task.state}
+    
     
     
     
