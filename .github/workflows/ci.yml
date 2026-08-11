@@ -1,4 +1,4 @@
-name: GPT FASTAPI CI
+name: GPT CI
 
 on:
   push:
@@ -10,31 +10,30 @@ permissions:
   contents: read
 
 jobs:
-  test-and-build: 
+  test-and-build:
     runs-on: ubuntu-latest
 
-  steps: 
-    - name: Download repository
-      uses: actions/checkout@6
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v6
 
-    - name: Install Poetry
-      run:  pipx install poetry
-    
-    - name: Istall Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: "3.12"
-        cache: poetry
+      - name: Install Poetry
+        run: pipx install poetry
 
-    - name: Istall dependencies
-      run: poetry install --no-interaction --no-root
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: poetry
 
-    - name: Run tests
-      run: poetry run tests 
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
 
-    - name: Biuld Docker image
-      run: docker build -t gpt-project:${{ github.sha }} .
+      - name: Run tests
+        run: poetry run pytest
 
+      - name: Build Docker image
+        run: docker build -t gpt-project:${{ github.sha }} .
 
 
 
