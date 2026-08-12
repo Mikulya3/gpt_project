@@ -13,6 +13,34 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gpt_test
+        ports:
+          - 5432:5432
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SERVER: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: gpt_test
+
+      SECRET_KEY: test-secret-key
+      API_KEY: test-api-key
+
+      MAIL_USERNAME: test
+      MAIL_PASSWORD: test
+      MAIL_FROM: test@example.com
+      MAIL_PORT: 587
+      MAIL_SERVER: localhost
+
+      REDIS_BROKER_URL: redis://localhost:6379/0
+      CELERY_BACKEND_URL: redis://localhost:6379/1
+
     steps:
       - name: Download repository
         uses: actions/checkout@v6
